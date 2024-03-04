@@ -1,0 +1,223 @@
+using System;
+using System.Globalization;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        // Просимо користувача ввести число
+        Console.Write("Введіть суму гривень: ");
+        string input = Console.ReadLine();
+
+        // Замінюємо кому (,) на крапку (.) для коректного парсингу
+        input = input.Replace(',', '.');
+
+        // Перевіряємо, чи введено коректне число
+        if (!decimal.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amount) || amount < 0)
+        {
+            Console.WriteLine("Некоректний ввід. Будь ласка, введіть додатнє число.");
+            return;
+        }
+
+        // Перетворюємо суму гривень в текст
+        string textRepresentation = AmountToText_Ukrainian(amount);
+
+        // Виводимо результат
+        Console.WriteLine($"Текстове представлення: {textRepresentation}");
+    }
+
+    static string AmountToText_Ukrainian(decimal amount)
+    {
+        // Створюємо масиви для назв одиниць, десятків, сотень та тисяч
+        string[] units = {"", "одна", "дві", "три", "чотири", "п'ять", "шість", "сім", "вісім", "дев'ять"};
+        string[] teens = {"", "одинадцять", "дванадцять", "тринадцять", "чотирнадцять", "п'ятнадцять", "шістнадцять", "сімнадцять", "вісімнадцять", "дев'ятнадцять"};
+        string[] tens = {"", "десять", "двадцять", "тридцять", "сорок", "п'ятдесят", "шістдесят", "сімдесят", "вісімдесят", "дев'яносто"};
+        string[] hundreds = {"", "сто", "двісті", "триста", "чотириста", "п'ятсот", "шістсот", "сімсот", "вісімсот", "дев'ятсот"};
+        string[] thousands = {"", "тисяча", "тисячі", "тисячі", "тисячі", "тисяч", "тисяч", "тисяч", "тисяч", "тисяч"};
+
+        string result = "";
+
+        // Визначаємо кількість гривень та копійок
+        long hryvnia = (long)amount;
+        int kopecks = (int)((amount - hryvnia) * 100);
+
+        // Конвертуємо гривні в текст
+        if (hryvnia > 0)
+        {
+            int[] groups = new int[4];
+            for (int i = 0; hryvnia > 0; i++)
+            {
+                groups[i] = (int)(hryvnia % 1000);
+                hryvnia /= 1000;
+            }
+
+            for (int i = 3; i >= 0; i--)
+            {
+                int group = groups[i];
+                if (group == 0)
+                {
+                    continue;
+                }
+
+                int hundredsDigit = group / 100;
+                int tensDigit = (group % 100) / 10;
+                int unitsDigit = group % 10;
+
+                if (hundredsDigit > 0)
+                {
+                    result += hundreds[hundredsDigit] + " ";
+                }
+
+                if (tensDigit > 1)
+                {
+                    result += tens[tensDigit] + " ";
+                    if (unitsDigit > 0)
+                    {
+                        result += units[unitsDigit] + " ";
+                    }
+                }
+                else if (tensDigit == 1)
+                {
+                    if (unitsDigit > 0)
+                    {
+                        result += teens[unitsDigit] + " ";
+                    }
+                    else
+                    {
+                        result += tens[tensDigit] + " ";
+                    }
+                }
+                else
+                {
+                    if (unitsDigit > 0)
+                    {
+                        result += units[unitsDigit] + " ";
+                    }
+                }
+
+                if (group > 0)
+                {
+                    if (i == 1)
+                    {
+                        if (group >= 11 && group <= 19)
+                        {
+                            result += "тисяч ";
+                        }
+                        else if (group % 10 == 1)
+                        {
+                            result += "тисяча ";
+                        }
+                        else if (group % 10 >= 2 && group % 10 <= 4)
+                        {
+                            result += "тисячі ";
+                        }
+                        else
+                        {
+                            result += "тисяч ";
+                        }
+                    }
+                    else if (i > 1)
+                    {
+                        result += thousands[group == 1 ? i : 2] + " ";
+                    }
+                }
+            }
+        }
+        else
+        {
+            result = "нуль ";
+        }
+
+        // Додаємо слово "гривня"
+        result += GetPluralFormHryvnia(amount);
+
+        // Додаємо копійки, якщо вони є
+        if (kopecks > 0)
+        {
+            result += " ";
+            result += NumberToText_Ukrainian(kopecks);
+            result += " ";
+            result += GetPluralFormKopecks(kopecks);
+        }
+        else if (kopecks == 0)
+        {
+            result += " ";
+            result += "нуль копійок";
+        }
+
+        return result.Trim();
+    }
+
+    static string GetPluralFormHryvnia(decimal amount)
+    {
+        int lastTwoDigits = (int)(Math.Abs(amount) % 100);
+        int lastDigit = (int)(Math.Abs(amount) % 10);
+
+        if ((lastTwoDigits >= 11 && lastTwoDigits <= 19) || lastDigit == 0)
+        {
+            return "гривень";
+        }
+        else if (lastDigit == 1)
+        {
+            return "гривня";
+        }
+        else if (lastDigit >= 2 && lastDigit <= 4)
+        {
+            return "гривні";
+        }
+        else
+        {
+            return "гривень";
+        }
+    }
+
+    static string GetPluralFormKopecks(int kopecks)
+    {
+        if (kopecks >= 11 && kopecks <= 19)
+        {
+            return "копійок";
+        }
+
+        int lastDigit = kopecks % 10;
+
+        if (lastDigit == 1)
+        {
+            return "копійка";
+        }
+        else if (lastDigit >= 2 && lastDigit <= 4)
+        {
+            return "копійки";
+        }
+        else
+        {
+            return "копійок";
+        }
+    }
+
+    static string NumberToText_Ukrainian(int number)
+    {
+        // Створюємо масиви для назв чисел та десятків
+        string[] units = {"нуль", "одна", "дві", "три", "чотири", "п'ять", "шість", "сім", "вісім", "дев'ять"};
+        string[] teens = {"", "одинадцять", "дванадцять", "тринадцять", "чотирнадцять", "п'ятнадцять", "шістнадцять", "сімнадцять", "вісімнадцять", "дев'ятнадцять"};
+        string[] tens = {"", "десять", "двадцять", "тридцять", "сорок", "п'ятдесят", "шістдесят", "сімдесят", "вісімдесят", "дев'яносто"};
+
+        string result = "";
+
+        if (number < 10)
+        {
+            result = units[number];
+        }
+        else if (number < 20)
+        {
+            result = teens[number - 10];
+        }
+        else
+        {
+            int unitsDigit = number % 10;
+            int tensDigit = number / 10;
+            result = tens[tensDigit] + " " + units[unitsDigit];
+        }
+
+        return result.Trim();
+    }
+}
